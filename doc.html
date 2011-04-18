@@ -1,0 +1,145 @@
+
+SonMicroReader library
+
+Reads and writes to Mifare RFID tags
+Using a SonMicro SM130 reader.
+
+created 12 March 2008
+by Tom Igoe, Jørn Knutsen, Einar Marinussen, and Timo Arnall
+modified 4 March 2009
+by Tom Igoe
+
+Many good  ideas for this came from Xbee API library
+by Rob Faludi and Daniel Shiffman
+http://www.faludi.com
+http://www.shiffman.net       
+
+SonMicroReader(PApplet p, Serial s) - initializes a new instance of the library
+
+void start() - Starts the reader instance. Spawns a new thread to continually scan for new serial data, and generates a sonMicroEvent() when a new packet is received.
+
+void quit() - stops the reader instance
+
+boolean available() - returns whether or not there's an availble data packet
+
+int[] getSonMicroReading() - Used mainly for debugging, this method returns all the bytes that come in from the reader. Returns an array of all the bytes from the reader in response to a given command
+
+int getCommand()- returns the command byte as received by the reader
+
+int getPacketLength()  - returns the length of the payload as reported by the reader
+
+int getCheckSum()  - returns the checksum from the reader
+
+int[] getPayload() - returns the array of bytes in the payload of the message
+
+int[] getTagNumber() - returns the array of bytes in the tag number of the message
+
+
+String getTagString() - returns the ASCII-encoded hex string of the tag number of the message
+
+int getTagType() - Assuming there's a valid tag read, this returns the tag type, as follows:
+* 0x01 Mifare Ultralight 
+* 0x02 Mifare Standard 1K 
+* 0x03 Mifare Classic 4K 
+* 0xFF Unknown Tag type 
+
+void reset() -  Resets the reader by sending command 0x80
+
+void getFirmwareVersion() - gets the firmware of the reader by sending command 0x81
+
+int getErrorCode() - Gets the error code returned by some messages, as follows:
+
+Select Tag (command 0x83)
+* 0x4E 'N' No Tag present. 
+* 0x55 'U' Access failed due to RF Field is OFF
+
+Seek for Tag (command 0x82)
+* 0x4C  'L' Command in progress. 
+* 0x55 'U' Command in progress but RF Field is OFF  
+
+Authenticate (command 0x85)
+* 0x4C 'L' Login Successful 
+* 0x4E 'N' No Tag present or Login Failed 
+* 0x55 'U' Login Failed 
+* 0x45 'E' Invalid key format in E2PROM 
+
+Read Block (command 0x86) 
+* 0x4E 'N' No Tag present  
+* 0x46 'F' Read Failed 
+
+Read Value Block (command 0x87) 
+* 0x4E 'N' No Tag present  
+* 0x49 'I' Invalid Value Block 
+* 0x46 'F' Read Failed 
+
+Write Block (command 0x89)
+* 0x55 'U' Read after write failed
+* 0x58 'X' Unable to Read after write 
+* 0x4E 'N' No Tag present 
+* 0x46 'F' Write Failed 
+
+Write Value Block (command 0x8A)
+* 0x4E 'N' No Tag present  
+* 0x49 'I' Invalid Value Block. The block was not in the  
+*          proper value format when read back. This could 
+*          be because there was an error in writing   
+* 0x46 'F' Read Failed during verification 
+
+Write 4-byte block (command 0x8B)
+* 0x55 'U' Read after write failed
+* 0x58 'X' Unable to Read after write 
+* 0x4E 'N' No Tag present  
+* 0x46 'F' Write Failed 
+
+Write Master Key (command 0x8C)
+* 0x4C 'L'  Write Master key successful 
+* 0x4E 'N'  Write Master key fail  
+
+Set Antenna Power (command 0x90)
+* 0x00 RF Field switched Off 
+* 0x01 RF Field switched On  
+
+* Set Baud Rate (command 0x94)
+* 0x4C 'L' Change of Baud rate successful  
+* 0x4E 'N' Change of Baud rate failed  
+* @return  an int for the error code.
+
+String getErrorMessage() - returns a descriptive error message
+
+int getAntennaPower() - returns  the antenna power. 0x00 is off, anything else is on
+
+void seekTag() - Sends the Seek Tag command (0x83)
+
+void selectTag()- Sends the Select Tag command (0x82)
+
+void setAntennaPower(int level) - Sets the antenna power.  0x00 is off, anything else is on
+
+void sleep()  - Sends the sleep command (0x96)
+
+void setBaudRate(int baudRate) - sets the baud rate. Possible baud rates:
+* 9600 bps  
+* 19200 bps  
+* 38400 bps  
+* 57600 bps  
+* 115200 bps  
+
+void writeBlock(int thisBlock, String thisMessage) - Writes a 16-byte string to a block. If the string is less than 16 bytes, it fills the empty bytes with 0x00.  If more than 16 bytes, it generates an error message. You need to select and authenticate before you can read or write.
+
+
+public void writeFourByteBlock(int thisBlock, String thisMessage) - Writes a 4-byte string to a block. If the string is less than 16 bytes, it fills the empty bytes with 0x00.  If more than 4 bytes, it generates an error message. Used for Mifare ultralight tags. You need to select and authenticate before ou can read or write.
+
+
+void authenticate(int thisBlock, int authentication) - Authenticates for reading and writing. You need to select and authenticate before you can read or write.
+* thisBlock: Block to write to
+* authentication: Authentication type to use (see SM130 datasheet for more; as a default, use 0xFF)
+
+void readBlock(int thisBlock) - Reads a block of data. You need to select and authenticate before you can read or write. You need to select and authenticate before ou can read or write.
+* thisBlock:  Block to read from
+
+void sendCommand(int thisCommand) - Sends a single-byte command
+
+void sendCommand(int[] thisCommand) - Sends a multi-byte command
+
+int version() - returns the version number of the library
+
+
