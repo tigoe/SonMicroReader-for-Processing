@@ -11,7 +11,7 @@ ArrayList buttons = new ArrayList();  // list of buttons
 // the buttons themselves:
 String[]  buttonNames = { 
   "antenna power", "select tag", "authenticate", "read block", "seek Tag",
-  "write block", "write 4-byte block", "firmware version"
+  "write block", "firmware version"
 };
 
 boolean locked = false; // whether the buttons are locked

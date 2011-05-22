@@ -49,7 +49,7 @@ void setup() {
 
   // based on the list of serial ports printed from the 
   // previous command, change the 0 to your port's number:
-  String portnum = Serial.list()[0];
+  String portnum = Serial.list()[2];
   // initialize the serial port. default data rate for
   // the SM130 reader is 19200:
   myPort = new Serial(this, portnum, 19200);
@@ -172,12 +172,7 @@ void buttonPressed(RectButton thisButton) {
     myReader.writeBlock(0x10, outputString);
     outputString = "";
     break;
-  case 6:  // write 4-byte block - must be 4 bytes or less
-    String shortString = outputString.substring(0,4);
-    println(shortString);
-    myReader.writeFourByteBlock(0x10, shortString);
-    break;
-  case 7:  // get reader firmware version
+  case 6:  // get reader firmware version
     myReader.getFirmwareVersion();
     break; 
   }

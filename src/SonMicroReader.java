@@ -7,8 +7,8 @@
 
     created 12 March 2008
     by Tom Igoe, J¿rn Knutsen, Einar Marinussen, and Timo Arnall
-    modified 4 March 2009
-    by Tom Igoe
+    modified 19 May 2011
+    by Tom Igoe with help from Brian Jepson
 
     Many good  ideas for this came from Xbee API library
     by Rob Faludi and Daniel Shiffman
@@ -38,12 +38,12 @@ public class SonMicroReader extends Thread {
     private int packetLength = 0;          // length of the response, from the packet
     private int checkSum = 0;              // checksum value received
     private int[] payload = null;          // data received 
-    private int[] tagNumber = null;        // tag number 
+    private int tagNumber = 0;    	       // tag number 
     private int tagType = 0;               // the type of tag
     private int errorCode = 0;             // error code from some commands
     private String errorMsg = "";          // descriptive error message
     private int antennaPower = 1;          // antenna power level
-    private int versionNumber = 0002;       // version of the library
+    private int versionNumber = 003;       // version of the library
  
     // Constructor, create the thread. It is not running by default
     public SonMicroReader(PApplet p, Serial s) {
@@ -83,7 +83,7 @@ public class SonMicroReader extends Thread {
                     errorCode = data[4];
                     payload = null;
                     tagType = 0;
-                    tagNumber = null;
+                    tagNumber = 0;
                 } 
                 else {
                     errorCode = 0; 
@@ -107,14 +107,21 @@ public class SonMicroReader extends Thread {
 
                 // some messages generate error codes.  Return them here.
                 switch (command) {
-                // reset and firmware version only produce the firmware version:
+                // reset produces nothing as of version 2.8 of the SM130 firmware:
                 case 0x80:
+                	break;
+                // firmware version only produces the firmware version:
                 case 0x81: 
                     errorCode = 0;
-                    payload = null;
                     tagType = 0;
-                    tagNumber = null;
-                    errorMsg = "Firmware version";
+                    tagNumber = 0;
+                    errorMsg = "Firmware version: ";
+                     // if you got a good payload, it's a tag number:
+                    if (payload != null) {
+ 	                    for (int i = 4; i < data.length-1; i++) {
+ 	                    	errorMsg += (char)data[i];
+	                    }
+                    }
                     break;
                 case 0x82:  // seekTag    
                     if (errorCode == 0x55) {
@@ -125,7 +132,10 @@ public class SonMicroReader extends Thread {
                     }
                     // if you got a good payload, it's a tag number:
                     if (payload != null) {
-                        tagNumber = payload; 
+ 	                    for (int i = 0; i < payload.length; i++) {
+ 	                    	tagNumber = tagNumber << 8;
+		                    tagNumber += payload[payload.length-1-i]; 
+	                    }
                     }
                     break;
                 case 0x83:  // selectTag
@@ -139,8 +149,11 @@ public class SonMicroReader extends Thread {
                     }
                     // if you got a good payload, it's a tag number:
                     if (payload != null) {
-                        tagNumber = payload; 
-                    }
+                         for (int i = 0; i < payload.length; i++) {
+ 	                    	tagNumber = tagNumber << 8;
+		                    tagNumber += payload[payload.length-1-i]; 
+	                    }
+	                }
                     break;
                 case 0x85:  //authenticate
                     switch(errorCode) {
@@ -258,9 +271,7 @@ public class SonMicroReader extends Thread {
 
                 // generate a sonMicroEvent:
                 try {
-                    sonMicroMethod.invoke(parent, new Object[] { 
-                            this                                                                                                                                                                 }
-                    );
+                    sonMicroMethod.invoke(parent, new Object[] {this});
                     available = true;  
                 } 
                 catch (Exception e) {
@@ -358,13 +369,16 @@ public class SonMicroReader extends Thread {
         // get the last byte of the array, that's the checksum:
         int returnedCheckSum = responseArray[responseArray.length-1];
         calculatedCheckSum = calculatedCheckSum % 256;
-
+		
+		/*
+		// Checksum was causing bad reads on seek when tag was already in field
         if (calculatedCheckSum != returnedCheckSum) {
             // checksum is bad:
             responseArray = null;
             errorMsg = "bad checksum";
             if (DEBUG) parent.println(responseArray);
         }
+        */
         return responseArray;  
     }
     /**
@@ -400,7 +414,7 @@ public class SonMicroReader extends Thread {
      * @return  tagNumber the array of bytes in the tag number of the message
      * 
      */
-    public int[] getTagNumber() {
+    public long getTagNumber() {
         return tagNumber;
     }
     /**
@@ -409,11 +423,8 @@ public class SonMicroReader extends Thread {
      */
     public String getTagString() {
         String tagID = null;
-        if (tagNumber != null) {
-            tagID = "";  
-            for (int c = 0; c < tagNumber.length; c++) {
-                tagID += parent.hex(tagNumber[c], 2);
-            }
+        if (tagNumber != 0) {
+            tagID = parent.hex(tagNumber, 8);
         } 
         return tagID;
     }
@@ -448,9 +459,8 @@ public class SonMicroReader extends Thread {
      */
     public void getFirmwareVersion() {
         this.sendCommand(0x81);
-        System.out.println("Yea, I asked for firmware version.");  
     }
-
+    
     /**
      * Gets the error code returned by some messages
      * Error codes as follows:
@@ -676,12 +686,33 @@ public class SonMicroReader extends Thread {
      * @param thisBlock         Block to write to
      * @param authentication    Authentication type to use (see WriteMasterKey for more)
      */
-    public void authenticate(int thisBlock, int authentication) {
+     public void authenticate(int thisBlock) {
         int[] thisCommand = {
-                0x85,thisBlock, authentication                                                         }; 
+                0x85,thisBlock, 0xFF }; 
         sendCommand(thisCommand);
 
     }
+
+    
+    public void authenticate(int thisBlock, int authentication) {
+        int[] thisCommand = {
+                0x85,thisBlock, authentication }; 
+        sendCommand(thisCommand);
+
+    }
+    
+  public void authenticate(int thisBlock, int authentication, int[] thisKey) {
+        int[] thisCommand = new int[thisKey.length + 3];
+        thisCommand[0]= 0x85;
+        thisCommand[1]= thisBlock;
+        thisCommand[2]= authentication; 
+        System.arraycopy(thisKey, 0, thisCommand, 2, thisKey.length);                  
+        sendCommand(thisCommand);
+
+    }
+
+    
+//authenticate(byte keyType, byte[] key)
     /**
      * Reads a block of data. You need to select and authenticate before ou can read or write.
      * You need to select and authenticate before ou can read or write.
