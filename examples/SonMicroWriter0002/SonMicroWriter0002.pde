@@ -7,9 +7,9 @@
  and write to Mifare RFID tags using the SonMicro reader.
  
  created 12 March 2008
- by Tom Igoe, Jørn Knutsen, Einar Marinussen, and Timo Arnall
- modified 4 March 2009
- by Tom Igoe
+ by Tom Igoe, Jørn Knutsen, Einar Martinussen, and Timo Arnall
+ modified 23 May 2011
+ by Tom Igoe with input from Brian Jepson
  
  Many good  ideas based on Xbee API library
  by Rob Faludi and Daniel Shiffman
@@ -43,18 +43,18 @@ String outputString = "Hello world!";    // string to write to tag
 
 void setup() {
   // set window size:
-  size(600,400);
+  size(600, 400);
   // list all the serial ports:
   println(Serial.list());
 
   // based on the list of serial ports printed from the 
   // previous command, change the 0 to your port's number:
-  String portnum = Serial.list()[2];
+  String portnum = Serial.list()[0];
   // initialize the serial port. default data rate for
   // the SM130 reader is 19200:
   myPort = new Serial(this, portnum, 19200);
   // initialize the reader instance:
-  myReader = new SonMicroReader(this,myPort);
+  myReader = new SonMicroReader(this, myPort);
   myReader.start();
 
   // create a font with the second font available to the system:
@@ -82,7 +82,8 @@ void draw() {
   String responseString = "";
   if (lastResponse != null) {
     for (int b = 0; b < lastResponse.length; b++) {
-      responseString += hex(lastResponse[b], 2) + " ";
+      responseString += hex(lastResponse[b], 2);
+      responseString += " ";
     }
     // wrap the full text so it doesn't overflow the buttons
     // and make the screen all messy:
@@ -93,15 +94,15 @@ void draw() {
   // if there's a message from the tag's memory,
   // print it:
   if (message != null) {
-    text("message read from tag:\n" + message, 10, 230); 
+    text("message read from tag:\n" + message, 10, 230);
   }
-  
+
   // print the output message:
-  text("type your message to write to tag:\n",10, 300); 
-  fill(0,0,150);
+  text("type your message to write to tag:\n", 10, 300); 
+  fill(0, 0, 150);
   text(outputString, 10, 320);
-  
-  // show the firmware version:
+
+  // show the library version:
   fill(0);
   text("SonMicroReader version: " + myReader.version(), width - 300, height - 30);
 }
@@ -118,12 +119,11 @@ void sonMicroEvent(SonMicroReader myReader) {
   lastTagType = myReader.getTagType();
   lastPacketLength =  myReader.getPacketLength();
   lastTag = myReader.getTagString();
-  println(lastTag);
   lastErrorCode = myReader.getErrorCode();
   lastAntennaPower = myReader.getAntennaPower();
   lastResponse = myReader.getSonMicroReading(); 
   lastChecksum = myReader.getCheckSum();
-  
+
   // if the last command sent was a read block command:
   if (lastCommand == 0x86) {
     int[] inputString = myReader.getPayload();
@@ -131,7 +131,6 @@ void sonMicroEvent(SonMicroReader myReader) {
     for (int c = 0; c < inputString.length; c++) {
       message += char(inputString[c]);
     }
-    println(message);
   } 
   else {
     message = null;
@@ -140,13 +139,13 @@ void sonMicroEvent(SonMicroReader myReader) {
 
 /*
   if one of the command buttons is pressed, figure out which one
-  and take the appropriate action.
-*/
+ and take the appropriate action.
+ */
 void buttonPressed(RectButton thisButton) {
   // figure out which button this is in the ArrayList:
   int buttonNumber = buttons.indexOf(thisButton);
 
-// do the right thing:
+  // do the right thing:
   switch (buttonNumber) {
   case 0: //  set antenna power
     if (myReader.getAntennaPower() < 1) {
@@ -160,33 +159,30 @@ void buttonPressed(RectButton thisButton) {
     myReader.selectTag();
     break;
   case 2:  // authenticate
-    myReader.authenticate(0x10, 0xFF);
+    myReader.authenticate(0x04, 0xFF);
     break; 
   case 3:   // readblock
-    myReader.readBlock(0x10);
+    myReader.readBlock(0x04);
     break;
   case 4:  // seek tag
     myReader.seekTag();
     break;
   case 5:  // write tag - must be 16 bytes or less
-    myReader.writeBlock(0x10, outputString);
+    myReader.writeBlock(0x04, outputString);
     outputString = "";
     break;
   case 6:  // get reader firmware version
     myReader.getFirmwareVersion();
-    break; 
+    break;
   }
 }
 
 /*
   If a key is typed, either add it to the output string
-  or delete the string if it's a backspace:
-*/
+ or delete the string if it's a backspace:
+ */
 void keyTyped() {
   switch (key) {
-  case ENTER:
-    outputString = "\0";
-    break;
   case BACKSPACE:  // delete
     outputString = "\0";
     break;
@@ -196,11 +192,10 @@ void keyTyped() {
       outputString += key;
     } 
     else {
-      outputString = "output string can't be more than 16 characters"; 
+      outputString = "output string can't be more than 16 characters";
     }
   }
 }
-
 
 
 
