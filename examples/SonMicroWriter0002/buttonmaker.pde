@@ -1,143 +1,115 @@
 /*
   This file makes buttons for the screen. You can change the names of the buttons
-  or the number of buttons just by changing the buttonNames list.
-  
-  based on the Processing Buttons example.
-*/
+ or the number of buttons just by changing the buttonNames list.
+ 
+ based on the Processing Buttons example.
+ */
 
-color currentcolor;        // current button color
-ArrayList buttons = new ArrayList();  // list of buttons
-
-// the buttons themselves:
-String[]  buttonNames = { 
-  "antenna power", "select tag", "authenticate", "read block", "seek Tag",
-  "write block", "firmware version"
-};
-
-boolean locked = false; // whether the buttons are locked
-
+/*
+ initialize all the buttons
+ */
 void makeButtons() {
-  // set up the base color of the buttons:
-  color baseColor = color(220, 220, 255);
-  currentcolor = baseColor;
-
   // Define and create rectangle button
   for (int b = 0; b < buttonNames.length; b++) {
     // create a new button with the next name in the list: 
-    color buttoncolor = color(180, 180, 220);
-    color highlight = color(102, 102, 180); 
-    RectButton thisButton = new RectButton(400, 30 +b*30, 150, 20, buttoncolor, highlight, buttonNames[b]);
+    Button thisButton = new Button(400, 30 +b*30, 150, 20, buttoncolor, highlight, buttonNames[b]);
     buttons.add(thisButton);
   }
-
 }
 /*
   draw all the buttons
-*/
+ */
 void drawButtons() {
-  background(currentcolor);
-  stroke(255);
-  update(mouseX, mouseY);
   for (int b = 0; b < buttons.size(); b++) {
-    RectButton thisButton = (RectButton)buttons.get(b);
+    // get this button from the Arraylist:
+    Button thisButton = (Button)buttons.get(b);
+    // update its pressed status:
+    thisButton.update();
+    // draw the button:
     thisButton.display();
   }
 }
 
-void update(int x, int y) {
-  if (locked == false) {  
-    for (int b = 0; b < buttons.size(); b++) {
-      RectButton thisButton = (RectButton)buttons.get(b);
-      thisButton.update();
-    }
-  } 
-  else {
-    locked = false;
-  }
-}
-
-
-void mouseReleased() {
+void mousePressed() {
   // iterate over the buttons, activate the one pressed
   for (int b = 0; b < buttons.size(); b++) {
-    RectButton thisButton = (RectButton)buttons.get(b);
-    if (thisButton.pressed()) {
-      buttonPressed(thisButton);
+    Button thisButton = (Button)buttons.get(b);
+    if (thisButton.containsMouse()) {
+      doButtonAction(thisButton);
     }
   }
 }
 
+/*
+  if one of the command buttons is pressed, figure out which one
+ and take the appropriate action.
+ */
+void doButtonAction(Button thisButton) {
+  // figure out which button this is in the ArrayList:
+  int buttonNumber = buttons.indexOf(thisButton);
 
-class Button {
-  int x, y, w, h;
-  color basecolor, highlightcolor;
-  color currentcolor;
-  boolean over = false;
-  boolean pressed = false;   
-
-  void update()  {
-    if(over()) {
-      currentcolor = highlightcolor;
+  // do the right thing:
+  switch (buttonNumber) {
+  case 0: //  set antenna power
+    if (myReader.getAntennaPower() < 1) {
+      myReader.setAntennaPower(0x01);
     } 
     else {
+      myReader.setAntennaPower(0x00);
+    }
+    break;
+  case 1: // select tag
+    myReader.selectTag();
+    break;
+  case 2:  // authenticate
+    myReader.authenticate(0x04, 0xFF);
+    break; 
+  case 3:   // readblock
+    myReader.readBlock(0x04);
+    break;
+  case 4:  // seek tag
+    myReader.seekTag();
+    break;
+  case 5:  // write tag - must be 16 bytes or less
+    myReader.writeBlock(0x04, outputString);
+    outputString = "";
+    break;
+  case 6:  // get reader firmware version
+    myReader.getFirmwareVersion();
+    break;
+  }
+}
+
+class Button {
+  int x, y, w, h;                    // positions of the buttons
+  color basecolor, highlightcolor;   // color and highlight color
+  color currentcolor;                // current color of the button
+  String name;
+
+  // Constructor: sets all the initial values for each instance of the Button class
+  Button(int thisX, int thisY, int thisW, int thisH, 
+  color thisColor, color thisHighlight, String thisName) {
+    x = thisX;
+    y = thisY;
+    h = thisH;
+    w = thisW;
+    basecolor = thisColor;
+    highlightcolor = thisHighlight;
+    currentcolor = basecolor;
+    name = thisName;
+  }
+
+  // if the mouse is over the button, change the button's color:
+  void update() {
+    if (containsMouse()) {
+      currentcolor = highlightcolor;
+    } 
+    else {    
       currentcolor = basecolor;
     }
   }
-
-  boolean pressed() {
-    if (over) {
-      locked = true;
-      return true;
-    } 
-    else {
-      locked = false;
-      return false;
-    }    
-  }
-
-
-  boolean over() 
-  { 
-    return true; 
-  }
-
-  boolean overRect(int x, int y, int width, int height)  {
-    if (mouseX >= x && mouseX <= x+width && 
-      mouseY >= y && mouseY <= y+height) {
-      return true;
-    } 
-    else {
-      return false;
-    }
-  }
-
-}
-
-class RectButton extends Button {
-  String name;
-
-  RectButton(int _x, int _y, int _w, int _h, color _color, color _highlight, String _name) {
-    x = _x;
-    y = _y;
-    h = _h;
-    w = _w;
-    basecolor = _color;
-    highlightcolor = _highlight;
-    currentcolor = basecolor;
-    name = _name;
-  }
-
-  boolean over()  {
-    if( overRect(x, y, w, h) ) {
-      over = true;
-      return true;
-    } 
-    else {
-      over = false;
-      return false;
-    }
-  }
-
+  
+  // draw the button and its text:
   void display() {
     fill(currentcolor);
     rect(x, y, w, h);
@@ -146,9 +118,17 @@ class RectButton extends Button {
     textAlign(CENTER, CENTER);
     text(name, x+w/2, y+h/2);
   }
+
+  // check to see if the mouse position is inside
+  // the bounds of the rectangle:
+  boolean containsMouse() {
+    if (mouseX >= x && mouseX <= x+w && 
+      mouseY >= y && mouseY <= y+h) {
+      return true;
+    } 
+    else {
+      return false;
+    }
+  }
 }
-
-
-
-
 

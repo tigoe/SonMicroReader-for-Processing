@@ -1,6 +1,6 @@
 
 /*
- SonMicro RFID Reader example
+ SonMicro RFID Writer example
  Language: Processing
  
  This sketch uses the SonMicroReader library to demonstrate how to read from
@@ -8,9 +8,9 @@
  
  created 12 March 2008
  by Tom Igoe, Jørn Knutsen, Einar Martinussen, and Timo Arnall
- modified 23 May 2011
+ modified 2 June 2011
  by Tom Igoe with input from Brian Jepson
- 
+ u  
  Many good  ideas based on Xbee API library
  by Rob Faludi and Daniel Shiffman
  http://www.faludi.com
@@ -22,9 +22,9 @@
 import processing.serial.*;
 import sonMicroReader.*;
 
-String tagID = "";        // the string for the tag ID
-Serial myPort;            // serial port instance
-SonMicroReader myReader;  // sonMicroReader instance
+String tagID = "";           // the string for the tag ID
+Serial myPort;               // serial port instance
+SonMicroReader myReader;     // sonMicroReader instance
 
 int  lastCommand = 0;        // last command sent
 int lastTagType = 0;         // last tag type received
@@ -39,7 +39,20 @@ int fontHeight = 14;         // font height for the text onscreen
 String message = null;       // message read from tag
 String outputString = "Hello world!";    // string to write to tag
 
+// Color theme: Ghostly Music
+// by banshee prime, http://kuler.adobe.com
+color currentcolor = #CBD0D4;    // current button color
+color highlight = #745370;
+color buttoncolor = #968195;
+color userText = #444929;
+color buttonText = #ACB0B9;
 
+ArrayList buttons = new ArrayList();  // list of buttons
+// the buttons themselves:
+String[]  buttonNames = { 
+  "antenna power", "select tag", "authenticate", "read block", "seek Tag", 
+  "write block", "firmware version"
+};
 
 void setup() {
   // set window size:
@@ -64,9 +77,8 @@ void setup() {
   makeButtons();
 }
 
-void draw() {
-  // clear the screen:
-  background(0);  
+void draw() {  
+  background(currentcolor);
   // draw the command buttons:
   drawButtons(); 
   // draw the output fields:
@@ -91,15 +103,12 @@ void draw() {
   }
   // print any error messages from the reader:
   text(myReader.getErrorMessage(), 10, 210);
-  // if there's a message from the tag's memory,
-  // print it:
-  if (message != null) {
-    text("message read from tag:\n" + message, 10, 230);
-  }
+  // print the last message read from the tag:
+  text("last message read from tag:\n" + message, 10, 230);
 
   // print the output message:
   text("type your message to write to tag:\n", 10, 300); 
-  fill(0, 0, 150);
+  fill(userText);
   text(outputString, 10, 320);
 
   // show the library version:
@@ -131,51 +140,9 @@ void sonMicroEvent(SonMicroReader myReader) {
     for (int c = 0; c < inputString.length; c++) {
       message += char(inputString[c]);
     }
-  } 
-  else {
-    message = null;
   }
 }
 
-/*
-  if one of the command buttons is pressed, figure out which one
- and take the appropriate action.
- */
-void buttonPressed(RectButton thisButton) {
-  // figure out which button this is in the ArrayList:
-  int buttonNumber = buttons.indexOf(thisButton);
-
-  // do the right thing:
-  switch (buttonNumber) {
-  case 0: //  set antenna power
-    if (myReader.getAntennaPower() < 1) {
-      myReader.setAntennaPower(0x01);
-    } 
-    else {
-      myReader.setAntennaPower(0x00);
-    }
-    break;
-  case 1: // select tag
-    myReader.selectTag();
-    break;
-  case 2:  // authenticate
-    myReader.authenticate(0x04, 0xFF);
-    break; 
-  case 3:   // readblock
-    myReader.readBlock(0x04);
-    break;
-  case 4:  // seek tag
-    myReader.seekTag();
-    break;
-  case 5:  // write tag - must be 16 bytes or less
-    myReader.writeBlock(0x04, outputString);
-    outputString = "";
-    break;
-  case 6:  // get reader firmware version
-    myReader.getFirmwareVersion();
-    break;
-  }
-}
 
 /*
   If a key is typed, either add it to the output string
@@ -196,14 +163,4 @@ void keyTyped() {
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
 
